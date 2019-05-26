@@ -47,6 +47,7 @@ def db_query(query, params, comment = ""):
             pass
         try:
             result_set = cursor_m.fetchall()
+            bot.send_message(211558, "resulr = " + str(result_set))
             if result_set is None or len(result_set) <= 0:
                 result_set = []
             return result_set
