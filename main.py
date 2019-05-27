@@ -55,7 +55,7 @@ class SaleMonBot:
         self.logger.addHandler(fh)
 
         self.TG_BOT_TOKEN = os.environ['TOKEN']
-        self.GLOBAL_RECONNECT_COUNT = os.environ['GLOBAL_RECONNECT_COUNT']
+        self.GLOBAL_RECONNECT_COUNT = int(os.environ['GLOBAL_RECONNECT_COUNT'])
         self.reconnect_count = self.GLOBAL_RECONNECT_COUNT
         self.GLOBAL_RECONNECT_INTERVAL = 5
         self.RECONNECT_ERRORS = []
