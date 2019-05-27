@@ -73,8 +73,10 @@ class SaleMonBot:
 
         # Настройка Flask
         self.server = Flask(__name__)
+        self.server.debug = 'DEBUG' in os.environ
         self.TELEBOT_URL = 'telebot_webhook/'
         self.BASE_URL = 'https://test-hw-bot.herokuapp.com/'
+        
 
         self.server.add_url_rule('/' + self.TELEBOT_URL + self.TG_BOT_TOKEN, view_func=self.process_updates, methods=['POST'])
         self.server.add_url_rule("/", view_func=self.webhook)
@@ -186,6 +188,7 @@ class SaleMonBot:
         while True:
             try:
                 print("Server run. Version 1.44")
+                self.server.logger.info("Server run. Version 1.45")
                 self.webhook()
                 self.server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
                 self.logger.info("Server run")
