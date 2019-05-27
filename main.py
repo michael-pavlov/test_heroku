@@ -282,6 +282,7 @@ class SaleMonBot:
     def command_show(self, message):
         self.logger.info("Receive Show command from chat ID:" + str(message.chat.id))
         urls = self.db_query("select url,subscription,url_id from salemon_engine_urls where user_id = %s", (message.chat.id,), "Get all urls")
+        self.logger.debug("Urls: " + str(urls))
         if len(urls) < 1:
             self.bot.send_message(message.chat.id,"No URLs yet.\nTap /add to add URL")
             return
