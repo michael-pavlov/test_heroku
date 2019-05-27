@@ -40,19 +40,20 @@ import time
 from logging.handlers import RotatingFileHandler
 import validators
 from urllib.parse import urlparse
+import sys
 
 
 class SaleMonBot:
 
     def __init__(self):
 
-        self.logger = logging.getLogger("salemnon_bot")
+        self.logger = logging.getLogger("SalemonBot")
         self.logger.setLevel(logging.DEBUG)
-        fh = RotatingFileHandler("salemnon_bot.log", mode='a', encoding='utf-8', backupCount=5,
-                                 maxBytes=16 * 1024 * 1024)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s %(name)s : %(levelname)s : %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
         self.TG_BOT_TOKEN = os.environ['TOKEN']
         self.GLOBAL_RECONNECT_COUNT = int(os.environ['GLOBAL_RECONNECT_COUNT'])
@@ -73,7 +74,6 @@ class SaleMonBot:
 
         # Настройка Flask
         self.server = Flask(__name__)
-        self.server.debug = 'DEBUG' in os.environ
         self.TELEBOT_URL = 'telebot_webhook/'
         self.BASE_URL = 'https://test-hw-bot.herokuapp.com/'
         
@@ -188,11 +188,9 @@ class SaleMonBot:
         while True:
             try:
                 print("Server run. Version 1.44")
-                self.server.logger.info("Server run. Version 1.45")
+                self.logger.info("Server run. Version 1.45")
                 self.webhook()
                 self.server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
-                self.logger.info("Server run")
-                self.bot.send_message(self.ADMIN_ID, "Server run!")
             except Exception as e:
                 self.logger.critical("Cant start Bot. RECONNECT" + str(e))
                 time.sleep(2)
