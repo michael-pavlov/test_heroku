@@ -31,6 +31,9 @@
 # version 1.44 2019-05-17
 # добавил ya music
 
+# version 1.45 2019-05-27
+# портировано на webhook, heroku
+
 import os
 import telebot
 from flask import Flask, request
@@ -42,6 +45,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
+VERSION = "1.45"
 
 class SaleMonBot:
 
@@ -187,8 +191,7 @@ class SaleMonBot:
     def run(self):
         while True:
             try:
-                print("Server run. Version 1.44")
-                self.logger.info("Server run. Version 1.45")
+                self.logger.info("Server run. Version: " + VERSION)
                 self.webhook()
                 self.server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
             except Exception as e:
