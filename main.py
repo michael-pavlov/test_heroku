@@ -185,6 +185,7 @@ class SaleMonBot:
     def run(self):
         while True:
             try:
+                print("Server run. Version 1.44")
                 self.webhook()
                 self.server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
                 self.logger.info("Server run")
