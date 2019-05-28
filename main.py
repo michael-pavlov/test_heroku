@@ -113,7 +113,7 @@ class SaleMonBot:
 
                 self.connection_main = mysql.connector.connect(user=self.DB_USER, password=self.DB_PASSWORD,
                                                     host=self.DB_HOST, port=self.DB_PORT,
-                                                    database=self.DB_DATABASE)
+                                                    database=self.DB_DATABASE,use_pure=False)
                 self.connection_main.autocommit = True
 
                 self.cursor_m = self.connection_main.cursor()
