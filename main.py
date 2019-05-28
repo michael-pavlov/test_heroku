@@ -116,7 +116,7 @@ class SaleMonBot:
                                                     database=self.DB_DATABASE,use_pure=False)
                 self.connection_main.autocommit = True
 
-                self.cursor_m = self.connection_main.cursor()
+                self.cursor_m = self.connection_main.cursor(buffered=True)
                 self.logger.info("Reconnect successful" + str(self.connection_main.is_connected()))
                 self.reconnect_count = self.GLOBAL_RECONNECT_COUNT
                 return True
