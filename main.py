@@ -131,19 +131,13 @@ class SaleMonBot:
         try:
             for result_ in self.cursor_m.execute(query, params, multi=True):
                 pass
-        except mysql.connector.DatabaseError as err:
+        except Exception as err:
             self.logger.warning("Cant " + comment + ". Error: " + str(err))
-            if err.errno not in self.RECONNECT_ERRORS: # не оттестировано, убираем пока проверку на ошибки
-                if self.mysql_reconnect():
-                    return self.db_execute(query, params, comment)
-                else:
-                    self.logger.critical("Cant " + comment)
-                    return False
+            if self.mysql_reconnect():
+                return self.db_execute(query, params, comment)
             else:
                 self.logger.critical("Cant " + comment)
                 return False
-        except Exception as e:
-            self.logger.critical("Cant " + comment + ". " + str(e))
         else:
             try:
                 self.connection_main.commit()
@@ -166,14 +160,10 @@ class SaleMonBot:
                 result_set = []
         except Exception as err:
             self.logger.warning("Cant " + comment + ". Error: " + str(err))
-            if err.errno not in self.RECONNECT_ERRORS: # не оттестировано, убираем пока проверку на ошибки
-                if self.mysql_reconnect():
-                    return self.db_query(query, params, comment)
-                else:
-                    self.logger.critical("Cant1 " + comment)
-                    return []
+            if self.mysql_reconnect():
+                return self.db_query(query, params, comment)
             else:
-                self.logger.critical("Cant2 " + comment)
+                self.logger.critical("Cant " + comment)
                 return []
         #except Exception as e:
         #    self.logger.critical("Cant "  + comment + ". " + str(e))
