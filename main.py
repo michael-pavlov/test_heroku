@@ -45,7 +45,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.45"
+VERSION = "1.451"
 
 class SaleMonBot:
 
@@ -164,19 +164,19 @@ class SaleMonBot:
                 return result_set
             except:
                 result_set = []
-        except mysql.connector.DatabaseError as err:
+        except Exception as err:
             self.logger.warning("Cant " + comment + ". Error: " + str(err))
             if err.errno not in self.RECONNECT_ERRORS: # не оттестировано, убираем пока проверку на ошибки
                 if self.mysql_reconnect():
                     return self.db_query(query, params, comment)
                 else:
-                    self.logger.critical("Cant " + comment)
+                    self.logger.critical("Cant1 " + comment)
                     return []
             else:
-                self.logger.critical("Cant " + comment)
+                self.logger.critical("Cant2 " + comment)
                 return []
-        except Exception as e:
-            self.logger.critical("Cant "  + comment + ". " + str(e))
+        #except Exception as e:
+        #    self.logger.critical("Cant "  + comment + ". " + str(e))
         return []
 
     def start_polling(self):
