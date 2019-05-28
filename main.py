@@ -117,7 +117,7 @@ class SaleMonBot:
                 self.connection_main.autocommit = True
 
                 self.cursor_m = self.connection_main.cursor()
-                self.logger.info("Reconnect successful")
+                self.logger.info("Reconnect successful" + str(self.connection_main.is_connected()))
                 self.reconnect_count = self.GLOBAL_RECONNECT_COUNT
                 return True
             except Exception as e:
@@ -149,14 +149,17 @@ class SaleMonBot:
     # method for selects
     def db_query(self, query, params, comment = ""):
         try:
+            self.logger.info("db_query()" + comment)
             for result_ in self.cursor_m.execute(query, params, multi=True):
                 pass
             try:
                 result_set = self.cursor_m.fetchall()
+                self.logger.info("db_query().result_set:" + str(result_set))
                 if result_set is None or len(result_set) <= 0:
                     result_set = []
                 return result_set
-            except:
+            except Exception as erro:
+                self.logger.warning("Cant " + comment + ". Error0: " + str(erro))
                 result_set = []
         except Exception as err:
             self.logger.warning("Cant " + comment + ". Error: " + str(err))
@@ -270,22 +273,25 @@ class SaleMonBot:
         return
 
     def command_show(self, message):
-        self.logger.info("Receive Show command from chat ID:" + str(message.chat.id))
-        urls = self.db_query("select url,subscription,url_id from salemon_engine_urls where user_id = %s", (message.chat.id,), "Get all urls")
-        self.logger.debug("Urls: " + str(urls))
-        if len(urls) < 1:
-            self.bot.send_message(message.chat.id,"No URLs yet.\nTap /add to add URL")
-            return
+        try:
+            self.logger.info("Receive Show command from chat ID:" + str(message.chat.id))
+            urls = self.db_query("select url,subscription,url_id from salemon_engine_urls where user_id = %s", (message.chat.id,), "Get all urls")
+            self.logger.debug("Urls: " + str(urls))
+            if len(urls) < 1:
+                self.bot.send_message(message.chat.id,"No URLs yet.\nTap /add to add URL")
+                return
 
-        self.bot.send_message(message.chat.id, "Your URLs and filters:")
-        keys = ["modify","delete"]
-        for url in urls:
-            url_message = self.bot.send_message(message.chat.id, url[0] + "\n" + url[1].replace("|","\n"), reply_markup=self.inline_keyboard(keys),disable_web_page_preview=True)
-            try:
-                self.db_execute("insert into salemon_bot_inline_urls (url_id,user_id,message_id) values (%s,%s,%s)", (url[2], message.chat.id, url_message.message_id), "Add inline url")
-            except Exception as e:
-                self.logger.critical("Cant insert urls into inline_table. " + str(e) + str(url_message))
-                pass
+            self.bot.send_message(message.chat.id, "Your URLs and filters:")
+            keys = ["modify","delete"]
+            for url in urls:
+                url_message = self.bot.send_message(message.chat.id, url[0] + "\n" + url[1].replace("|","\n"), reply_markup=self.inline_keyboard(keys),disable_web_page_preview=True)
+                try:
+                    self.db_execute("insert into salemon_bot_inline_urls (url_id,user_id,message_id) values (%s,%s,%s)", (url[2], message.chat.id, url_message.message_id), "Add inline url")
+                except Exception as e:
+                    self.logger.critical("Cant insert urls into inline_table. " + str(e) + str(url_message))
+                    pass
+        except Exception as err:
+            self.logger.critical("Cant execute Show: " + str(e))
         return
 
     def markup_keyboard(self, list):
