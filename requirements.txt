@@ -1,4 +1,4 @@
 pytelegrambotapi==3.6.6
 flask
-mysql-connector-python==8.0.13
+mysql-connector
 validators==0.12.6
