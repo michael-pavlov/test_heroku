@@ -34,18 +34,20 @@
 # version 1.45 2019-05-27
 # портировано на webhook, heroku
 
+# version 1.46 2019-05-27
+# add stop
+
 import os
 import telebot
 from flask import Flask, request
 import mysql.connector
 import logging
 import time
-from logging.handlers import RotatingFileHandler
 import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.453"
+VERSION = "1.46"
 
 
 class SaleMonBot:
@@ -119,7 +121,7 @@ class SaleMonBot:
                 self.connection_main.reconnect(attempts=3,delay=2)
 
                 self.cursor_m = self.connection_main.cursor(buffered=True)
-                self.logger.info("Reconnect successful" + str(self.connection_main.is_connected()))
+                self.logger.info("Reconnect successful " + str(self.connection_main.is_connected()))
                 self.reconnect_count = self.GLOBAL_RECONNECT_COUNT
                 return True
             except Exception as e:
@@ -156,7 +158,7 @@ class SaleMonBot:
                 pass
             try:
                 result_set = self.cursor_m.fetchall()
-                self.logger.info("db_query().result_set:" + str(result_set))
+                self.logger.debug("db_query().result_set:" + str(result_set))
                 if result_set is None or len(result_set) <= 0:
                     result_set = []
                 return result_set
@@ -260,6 +262,14 @@ class SaleMonBot:
             self.logger.critical("Cant execute Usage command. " + str(e))
         return
 
+    def command_stop(self, message):
+        try:
+            self.logger.info("Receive Stop command from chat ID:" + str(message.chat.id))
+            self.bot.send_message(self.ADMIN_ID, "Stop user: " + str(message.chat.id))
+        except Exception as e:
+            self.logger.critical("Cant execute Stop command. " + str(e))
+        return
+
     def command_add(self, message):
         self.logger.info("Receive Add command from chat ID:" + str(message.chat.id))
         # проверяем доступное количество URL
@@ -308,6 +318,21 @@ class SaleMonBot:
             self.logger.critical("Cant execute Show: " + str(e))
         return
 
+    def command_upgrade(self, message):
+        try:
+            self.logger.info("Receive Upgrade command from chat ID:" + str(message.chat.id))
+            self.bot.send_message(self.ADMIN_ID, "Receive Upgrade command from chat ID: " + str(message.chat.id))
+            self.bot.send_message(message.chat.id, "Plans:\n"
+                                                   "10 urls - $10 per month\n"
+                                                   "20 urls - $15 per month\n"
+                                                   "dedicated instance (1-2 min delay) - ask @m_m_pa\n"
+                                                   "custom - ask @m_m_pa\n"
+                                                   "\n",
+                                  disable_web_page_preview=True)
+        except Exception as e:
+            self.logger.critical("Cant execute Upgrade command. " + str(e))
+        return
+
     def markup_keyboard(self, list):
         markupkeyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=7)
         markupkeyboard.add(*[telebot.types.KeyboardButton(name) for name in list])
@@ -346,6 +371,12 @@ class SaleMonBot:
             if message.text.startswith("/show"):
                 self.command_show(message)
                 return
+            if message.text.startswith("/upgrade"):
+                self.command_upgrade(message)
+                return
+            if message.text.startswith("/stop"):
+                self.command_stop(message)
+                return
             if message.text.startswith("/broadcast"):
                 if int(message.chat.id) == int(self.ADMIN_ID):
                     self.broadcast(message.text.replace("/broadcast ", ""))
@@ -365,6 +396,7 @@ class SaleMonBot:
                     self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
                                     "Update State")
                     self.bot.reply_to(message, "Done!")
+                    self.bot.send_message(self.ADMIN_ID, "New url: " + message.text)
                 else:
                     self.bot.reply_to(message,
                                       "Not a valid url or unsupported site\nExample: http://www.domain.com/search?q=test")
@@ -520,10 +552,12 @@ class SaleMonBot:
         try:
             for item in self.db_query("select user_id from salemon_bot_users", (), "Get all Users"):
                 self.bot.send_message(item[0], message)
+                self.logger.info("Successfully sent broadcast for user:" + str(item[0]))
         except Exception as e:
-            self.logger.warning("Cant send broadcast message:" + str(e))
+            self.logger.warning("Cant send broadcast message" + str(e))
 
 
 if __name__ == '__main__':
     dBot = SaleMonBot()
     dBot.run()
+
