@@ -37,6 +37,9 @@
 # version 1.46 2019-05-27
 # add stop
 
+# version 1.47 2019-05-27
+# add tele2 hack support
+
 import os
 import telebot
 from flask import Flask, request
@@ -47,7 +50,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.46"
+VERSION = "1.47"
 
 
 class SaleMonBot:
@@ -532,6 +535,9 @@ class SaleMonBot:
             if not url.endswith("albums/new"):
                 return False
 
+        if url.find("katorig") > 0:
+            priority = 2
+
         if self.db_execute(
                 "insert into salemon_engine_urls (url,user_id,tor_requirement,priority) values (%s,%s,%s,%s)",
                 (url, user_id, tor_requirement, priority), "Add url"):
@@ -560,4 +566,5 @@ class SaleMonBot:
 if __name__ == '__main__':
     dBot = SaleMonBot()
     dBot.run()
+
 
