@@ -37,9 +37,13 @@
 # version 1.46 2019-05-27
 # add stop
 
-# version 1.48 2019-05-27
+# version 1.48 2019-06-01
 # add tele2 hack support
 # bugfix
+
+# version 1.49 2019-06-01
+# update Usage
+
 
 import os
 import telebot
@@ -51,7 +55,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.48"
+VERSION = "1.49"
 
 
 class SaleMonBot:
@@ -236,32 +240,25 @@ class SaleMonBot:
     def command_usage(self, message):
         try:
             self.logger.info("Receive Usage command from chat ID:" + str(message.chat.id))
-            self.bot.send_message(message.chat.id, "Usage:\n"
-                                                   "*Фильтры*(для добавления к каждому URL).\n"
-                                                   "Для *первого* использования рекомендуется *оставлять* \'\*\' или *пустым*.\n\n"
-                                                   "Добавляет раздел в подписку:\n"
-                                                   "_+$ИмяРаздела_\n"
-                                                   "Добавляет раздел и фильтрует по названию лота:\n"
-                                                   "_+$ИмяРаздела:+слово,+оба слова,+(строгая фараза)_\n"
-                                                   "Или также, но удаляем ненужные лоты по условиям в названии:\n"
-                                                   "_+$ИмяРаздела:-стопслово,-(строгая стопфараза)_\n"
-                                                   "Из раздела ничего не показывать:\n"
-                                                   "_-$ИмяРаздела_\n"
-                                                   "Подписаться на лоты со словами в названии:\n"
-                                                   "_+слово_\n"
-                                                   "Убрать лоты со словами в названии:\n"
-                                                   "_-слово_\n\n"
-                                                   "Одно условие - одна строка. Разделитель строк - перевод строки(shift-enter):\n"
-                                                   "Список подписок вводится только целиком, полностью затирает старый список\n"
-                                                   "Количество строк - любое\n\n"
-                                                   "*Пример набора*: ищет в разделе Коллекционное лоты с словами эвм или куба, но исключает из выдачи марки и открытки, убирает раздел Бытовая техника, но включает все разделы Техника, включает все лоты с эвм и игра электроника, кроме лотов из явно запрещенных разделов.\n"
-                                                   "_+$коллекционное:+эвм,+куба_\n"
-                                                   "_-$бытовая техника_\n"
-                                                   "_+$техника_\n"
-                                                   "_-$марки_\n"
-                                                   "_-$открытки_\n"
-                                                   "_+эвм_\n"
-                                                   "_+игра электроника_\n", parse_mode='Markdown')
+            self.bot.send_message(message.chat.id, "*Usage*:\n"
+                                                   "1. Go to one of supported sites, make search with your own filters and options\n"
+                                                   "2. Sort mode must be *\"newest first\"* or the same\n"
+                                                   "3. Copy URl from address line in brouser\n"
+                                                   "4. Go to bot and tap /add command\n"
+                                                   "5. Paste URL. Wait \"Done\" message\n"
+                                                   "6. Thats it! New ads will come to this chat\n"
+                                                   "\n"
+                                                   "*Support sites*:\n"
+                                                   "ebay.com\n"
+                                                   "avito.ru\n"
+                                                   "youla.ru \n"
+                                                   "music.yandex.ru\n"
+                                                   "realty.yandex.ru\n"
+                                                   "sob.ru\n"
+                                                   "kvartirant.ru\n"
+                                                   "thelocals.ru\n"
+                                                   "kvadroom.ru\n"
+                                                   "\n", parse_mode='Markdown')
         except Exception as e:
             self.logger.critical("Cant execute Usage command. " + str(e))
         return
