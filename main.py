@@ -37,8 +37,9 @@
 # version 1.46 2019-05-27
 # add stop
 
-# version 1.47 2019-05-27
+# version 1.48 2019-05-27
 # add tele2 hack support
+# bugfix
 
 import os
 import telebot
@@ -50,7 +51,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.47"
+VERSION = "1.48"
 
 
 class SaleMonBot:
@@ -275,24 +276,31 @@ class SaleMonBot:
 
     def command_add(self, message):
         self.logger.info("Receive Add command from chat ID:" + str(message.chat.id))
-        # проверяем доступное количество URL
 
-        urls_count = \
-        self.db_query("select count(*) from salemon_engine_urls where user_id = %s", (message.chat.id,), "Count urls")[
-            0][0]
-        max_urls_for_user = \
-        self.db_query("select max_urls from salemon_bot_users where user_id = %s", (message.chat.id,),
-                      "Get User Max Urls")[0][0]
-        if urls_count >= max_urls_for_user:
-            self.bot.send_message(message.chat.id, "Url limit exceeded.\nDelete other URLs or /upgrade account")
-            return
+        try:
+            # проверяем доступное количество URL
+            urls_count = \
+            self.db_query("select count(*) from salemon_engine_urls where user_id = %s", (message.chat.id,), "Count urls")[
+                0][0]
+            max_urls_for_user = \
+            self.db_query("select max_urls from salemon_bot_users where user_id = %s", (message.chat.id,),
+                          "Get User Max Urls")[0][0]
+            if urls_count >= max_urls_for_user:
+                self.bot.send_message(message.chat.id, "Url limit exceeded.\nDelete other URLs or /upgrade account")
+                return
 
-        # если есть еще место - добавялем
-        if self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("wait_url", message.chat.id),
-                           "Update State"):
-            self.bot.send_message(message.chat.id, "Please paste url\nExample: http://www.domain.com/search?q=test")
-        else:
-            self.bot.send_message(message.chat.id, "ops...")
+            # если есть еще место - добавляем
+            if self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("wait_url", message.chat.id),
+                               "Update State"):
+                self.bot.send_message(message.chat.id, "Please paste url\nExample: http://www.domain.com/search?q=test")
+            else:
+                self.bot.send_message(message.chat.id, "ops...")
+        except Exception as e:
+            self.logger.info("Cant execute Add command from chat ID:" + str(message.chat.id))
+            try:
+                self.bot.send_message(message.chat.id, "ops... please tap /start or contact support")
+            except:
+                pass
         return
 
     def command_show(self, message):
@@ -352,77 +360,82 @@ class SaleMonBot:
 
     def handle_messages(self, messages):
         for message in messages:
-            if message.reply_to_message is not None:
-                # TODO Process reply message
-                return
-            if message.text.startswith("/start"):
-                self.command_start(message)
-                self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
-                                "Update State")
-                return
-            if message.text.startswith("/help"):
-                self.command_help(message)
-                return
-            if message.text.startswith("/usage"):
-                self.command_usage(message)
-                self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
-                                "Update State")
-                return
-            if message.text.startswith("/add"):
-                self.command_add(message)
-                return
-            if message.text.startswith("/show"):
-                self.command_show(message)
-                return
-            if message.text.startswith("/upgrade"):
-                self.command_upgrade(message)
-                return
-            if message.text.startswith("/stop"):
-                self.command_stop(message)
-                return
-            if message.text.startswith("/broadcast"):
-                if int(message.chat.id) == int(self.ADMIN_ID):
-                    self.broadcast(message.text.replace("/broadcast ", ""))
-                else:
-                    self.bot.reply_to(message, "You are not admin")
-                return
-            if message.text.startswith("/"):
-                self.bot.reply_to(message, "Unknown command. Tap /help")
-                return
-
-            # проверка на статусы:
-            state = \
-            self.db_query("select state from salemon_bot_users where user_id=%s", (message.chat.id,), "Get State")[0][0]
-
-            if state == "wait_url":
-                if self.add_url(message.chat.id, message.text):
+            try:
+                if message.reply_to_message is not None:
+                    # TODO Process reply message
+                    return
+                if message.text.startswith("/start"):
+                    self.command_start(message)
                     self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
                                     "Update State")
-                    self.bot.reply_to(message, "Done!")
-                    self.bot.send_message(self.ADMIN_ID, "New url: " + message.text)
-                else:
-                    self.bot.reply_to(message,
-                                      "Not a valid url or unsupported site\nExample: http://www.domain.com/search?q=test")
-                return
-
-            if state.startswith("wait_subs_for_urlid"):
-                url_id = state[state.find(":") + 1:]
-                if self.set_subscription(url_id, message.text):
+                    return
+                if message.text.startswith("/help"):
+                    self.command_help(message)
+                    return
+                if message.text.startswith("/usage"):
+                    self.command_usage(message)
                     self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
                                     "Update State")
-                    self.bot.reply_to(message, "Done!")
-                else:
-                    self.bot.reply_to(message, "Not a valid format for this Domain\nHelp: " + self.MAIN_HELP_LINK)
-                return
+                    return
+                if message.text.startswith("/add"):
+                    self.command_add(message)
+                    return
+                if message.text.startswith("/show"):
+                    self.command_show(message)
+                    return
+                if message.text.startswith("/upgrade"):
+                    self.command_upgrade(message)
+                    return
+                if message.text.startswith("/stop"):
+                    self.command_stop(message)
+                    return
+                if message.text.startswith("/broadcast"):
+                    if int(message.chat.id) == int(self.ADMIN_ID):
+                        self.broadcast(message.text.replace("/broadcast ", ""))
+                    else:
+                        self.bot.reply_to(message, "You are not admin")
+                    return
+                if message.text.startswith("/"):
+                    self.bot.reply_to(message, "Unknown command. Tap /help")
+                    return
 
-            # Если ничего не сработало
-            # TODO проверть на урл и если да - вставлять
+                # проверка на статусы:
+                state = \
+                self.db_query("select state from salemon_bot_users where user_id=%s", (message.chat.id,), "Get State")[0][0]
 
-            # print(message)
+                if state == "wait_url":
+                    if self.add_url(message.chat.id, message.text):
+                        self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
+                                        "Update State")
+                        self.bot.reply_to(message, "Done!")
+                        self.bot.send_message(self.ADMIN_ID, "New url: " + message.text)
+                    else:
+                        self.bot.reply_to(message,
+                                          "Not a valid url or unsupported site\nExample: http://www.domain.com/search?q=test")
+                    return
 
-            commands = ["/help", "/show", "/add"]
-            self.bot.reply_to(message, text="Tap command", reply_markup=self.markup_keyboard(commands),
-                              parse_mode='Markdown')
+                if state.startswith("wait_subs_for_urlid"):
+                    url_id = state[state.find(":") + 1:]
+                    if self.set_subscription(url_id, message.text):
+                        self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
+                                        "Update State")
+                        self.bot.reply_to(message, "Done!")
+                    else:
+                        self.bot.reply_to(message, "Not a valid format for this Domain\nHelp: " + self.MAIN_HELP_LINK)
+                    return
+
+                # Если ничего не сработало
+                # TODO проверть на урл и если да - вставлять
+
+                # print(message)
+
+                commands = ["/help", "/show", "/add"]
+                self.bot.reply_to(message, text="Tap command", reply_markup=self.markup_keyboard(commands),
+                                  parse_mode='Markdown')
+            except Exception as e:
+                self.logger.warning("Cant process message:" + str(message) + str(e))
+                self.bot.reply_to(message, text="Unknown error. Tap command", reply_markup=self.markup_keyboard(commands),
+                                  parse_mode='Markdown')
 
     def handle_callback_messages(self, callback_message):
         # обязательный ответ в API
