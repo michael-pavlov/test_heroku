@@ -41,7 +41,7 @@
 # add tele2 hack support
 # bugfix
 
-# version 1.49 2019-06-01
+# version 1.50 2019-06-01
 # update Usage
 
 
@@ -55,7 +55,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.49"
+VERSION = "1.50"
 
 
 class SaleMonBot:
@@ -224,14 +224,16 @@ class SaleMonBot:
             self.logger.info("Receive Help command from chat ID:" + str(message.chat.id))
             self.bot.send_message(message.chat.id, "Help:\n"
                                                    "/help - show this message\n"
+                                                   "/usage - show usage(en)\n"
                                                    "/add - add url\n"
                                                    "/show - show urls\n"
             # "/ - edit your profile(TBD)\n"
             # "/qq - get incomming questions(TBD)\n"
             # "/... - ...\n"
-                                                   "readme - " + self.MAIN_HELP_LINK + "\n"
-                                                                                       "support - @m_m_pa\n"
-                                                                                       "\n",
+                                                   "readme(ru) - " + self.MAIN_HELP_LINK + "\n"
+                                                   "support - @m_m_pa\n\n"
+                                                   "version - " + VERSION + "\n"
+                                                   "\n",
                                   disable_web_page_preview=True)
         except Exception as e:
             self.logger.critical("Cant execute Help command. " + str(e))
@@ -243,7 +245,7 @@ class SaleMonBot:
             self.bot.send_message(message.chat.id, "*Usage*:\n"
                                                    "1. Go to one of supported sites, make search with your own filters and options\n"
                                                    "2. Sort mode must be *\"newest first\"* or the same\n"
-                                                   "3. Copy URl from address line in brouser\n"
+                                                   "3. Copy URL from address line in brouser\n"
                                                    "4. Go to bot and tap /add command\n"
                                                    "5. Paste URL. Wait \"Done\" message\n"
                                                    "6. Thats it! New ads will come to this chat\n"
@@ -576,5 +578,4 @@ class SaleMonBot:
 if __name__ == '__main__':
     dBot = SaleMonBot()
     dBot.run()
-
 
