@@ -43,6 +43,7 @@
 
 # version 1.50 2019-06-01
 # update Usage
+# version 1.51 2019-06-01
 
 
 import os
@@ -55,7 +56,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.50"
+VERSION = "1.51"
 
 
 class SaleMonBot:
@@ -360,6 +361,7 @@ class SaleMonBot:
     def handle_messages(self, messages):
         for message in messages:
             try:
+                self.bot.send_message(self.ADMIN_ID, "New message from " + str(message.chat.id) + "\n" + message.text)
                 if message.reply_to_message is not None:
                     # TODO Process reply message
                     return
@@ -433,6 +435,7 @@ class SaleMonBot:
                                   parse_mode='Markdown')
             except Exception as e:
                 self.logger.warning("Cant process message:" + str(message) + str(e))
+                commands = ["/help", "/show", "/add"]
                 self.bot.reply_to(message, text="Unknown error. Tap command", reply_markup=self.markup_keyboard(commands),
                                   parse_mode='Markdown')
 
@@ -578,4 +581,3 @@ class SaleMonBot:
 if __name__ == '__main__':
     dBot = SaleMonBot()
     dBot.run()
-
