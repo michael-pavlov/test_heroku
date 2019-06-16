@@ -44,7 +44,9 @@
 # version 1.50 2019-06-01
 # update Usage
 # version 1.51 2019-06-01
-
+# version 1.52 2019-06-16
+# add www.olx.ua
+# fix domain check process
 
 import os
 import telebot
@@ -56,7 +58,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.51"
+VERSION = "1.52"
 
 
 class SaleMonBot:
@@ -261,6 +263,7 @@ class SaleMonBot:
                                                    "kvartirant.ru\n"
                                                    "thelocals.ru\n"
                                                    "kvadroom.ru\n"
+                                                   "www.olx.ua\n"
                                                    "\n", parse_mode='Markdown')
         except Exception as e:
             self.logger.critical("Cant execute Usage command. " + str(e))
@@ -531,6 +534,7 @@ class SaleMonBot:
         # проверяем, есть ли  нас парсер для нее
         parsed_uri = urlparse(url)
         domain = '{uri.netloc}'.format(uri=parsed_uri)
+        domain = domain.replace("www.","")
         if len(self.db_query("select parser_name from salemon_engine_parsers where domain = %s", (domain,),
                              "Check Domain")) < 1:
             return False
@@ -549,9 +553,6 @@ class SaleMonBot:
             priority = 1
             if not url.endswith("albums/new"):
                 return False
-
-        if url.find("katorig") > 0:
-            priority = 2
 
         if self.db_execute(
                 "insert into salemon_engine_urls (url,user_id,tor_requirement,priority) values (%s,%s,%s,%s)",
