@@ -47,6 +47,8 @@
 # version 1.52 2019-06-16
 # add www.olx.ua
 # fix domain check process
+# version 1.53 2019-06-16
+# fix broadcasts
 
 import os
 import telebot
@@ -58,7 +60,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.52"
+VERSION = "1.53"
 
 
 class SaleMonBot:
@@ -571,12 +573,12 @@ class SaleMonBot:
             return False
 
     def broadcast(self, message):
-        try:
-            for item in self.db_query("select user_id from salemon_bot_users", (), "Get all Users"):
+        for item in self.db_query("select user_id from salemon_bot_users", (), "Get all Users"):
+            try:
                 self.bot.send_message(item[0], message)
                 self.logger.info("Successfully sent broadcast for user:" + str(item[0]))
-        except Exception as e:
-            self.logger.warning("Cant send broadcast message" + str(e))
+            except Exception as e:
+                self.logger.warning("Cant send broadcast message for user:" + str(item[0])+ "; " + str(e))
 
 
 if __name__ == '__main__':
