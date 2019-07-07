@@ -49,6 +49,8 @@
 # fix domain check process
 # version 1.53 2019-06-16
 # fix broadcasts
+# version 1.54 2019-07-07
+# donate, refactor markup_commands, fix m.avito
 
 import os
 import telebot
@@ -60,7 +62,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.53"
+VERSION = "1.54"
 
 
 class SaleMonBot:
@@ -85,6 +87,8 @@ class SaleMonBot:
 
         self.bot = telebot.TeleBot(self.TG_BOT_TOKEN)
         # telebot.apihelper.proxy = config.PROXY
+
+        self.markup_commands = ["/show", "/add", "/help", "/donate"]
 
         # привязываем хенделер сообщений к боту:
         self.bot.set_update_listener(self.handle_messages)
@@ -215,33 +219,44 @@ class SaleMonBot:
         else:
             user_name = message.from_user.first_name
 
-        commands = ["/help", "/show", "/add"]
         if self.new_user(message.chat.id, user_name):
             self.bot.send_message(message.chat.id, "Your are in. tap /help",
-                                  reply_markup=self.markup_keyboard(commands))
+                                  reply_markup=self.markup_keyboard(self.markup_commands))
             self.bot.send_message(self.ADMIN_ID, "New user: " + str(user_name))
         else:
             self.bot.send_message(message.chat.id, "Welcome back " + str(message.from_user.username) + ". Tap /help",
-                                  reply_markup=self.markup_keyboard(commands))
+                                  reply_markup=self.markup_keyboard(self.markup_commands))
 
     def command_help(self, message):
         try:
             self.logger.info("Receive Help command from chat ID:" + str(message.chat.id))
             self.bot.send_message(message.chat.id, "Help:\n"
-                                                   "/help - show this message\n"
                                                    "/usage - show usage(en)\n"
                                                    "/add - add url\n"
                                                    "/show - show urls\n"
-            # "/ - edit your profile(TBD)\n"
-            # "/qq - get incomming questions(TBD)\n"
-            # "/... - ...\n"
                                                    "readme(ru) - " + self.MAIN_HELP_LINK + "\n"
                                                    "support - @m_m_pa\n\n"
                                                    "version - " + VERSION + "\n"
                                                    "\n",
-                                  disable_web_page_preview=True)
+                                  disable_web_page_preview=True, reply_markup=self.markup_keyboard(self.markup_commands))
         except Exception as e:
             self.logger.critical("Cant execute Help command. " + str(e))
+        return
+
+    def command_donate(self, message):
+        try:
+            self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),"Update State")
+            self.logger.info("Receive Donate command from chat ID:" + str(message.chat.id))
+            self.bot.send_message(message.chat.id, "*Donate project*:\n"
+                                                   "PayPal: https://paypal.me/mrmichaelpavlov\n"
+                                                   "VK pay: https://vk.me/moneysend/to/23QW\n"
+                                                   "Mastercard: 5321 3046 4588 4500\n"
+                                                   "ETH: 0x6dD6E739891D15A3dcEFF9587dECC780a3809246\n"
+                                                   "BTC: 1FzUWXtViv1MtvyrgcPGSmwnusHAaUXxLM\n"
+                                                   "\n",
+                                  disable_web_page_preview=True, parse_mode='Markdown',reply_markup=self.markup_keyboard(self.markup_commands))
+        except Exception as e:
+            self.logger.critical("Cant execute Donate command. " + str(e))
         return
 
     def command_usage(self, message):
@@ -260,13 +275,16 @@ class SaleMonBot:
                                                    "avito.ru\n"
                                                    "youla.ru \n"
                                                    "music.yandex.ru\n"
-                                                   "realty.yandex.ru\n"
+                                                   "realty.yandex.ru (нестабильно)\n"
                                                    "sob.ru\n"
                                                    "kvartirant.ru\n"
                                                    "thelocals.ru\n"
                                                    "kvadroom.ru\n"
                                                    "www.olx.ua\n"
-                                                   "\n", parse_mode='Markdown')
+                                                   "www.olx.uz\n"
+                                                   "www.shafa.ua\n"
+                                                   "www.meshok.net\n"
+                                                   "\n", parse_mode='Markdown', reply_markup=self.markup_keyboard(self.markup_commands))
         except Exception as e:
             self.logger.critical("Cant execute Usage command. " + str(e))
         return
@@ -315,7 +333,7 @@ class SaleMonBot:
                                  (message.chat.id,), "Get all urls")
             self.logger.debug("Urls: " + str(urls))
             if len(urls) < 1:
-                self.bot.send_message(message.chat.id, "No URLs yet.\nTap /add to add URL")
+                self.bot.send_message(message.chat.id, "No URLs yet.\nTap /add to add URL",reply_markup=self.markup_keyboard(self.markup_commands))
                 return
 
             self.bot.send_message(message.chat.id, "Your URLs and filters:")
@@ -331,7 +349,7 @@ class SaleMonBot:
                     self.logger.critical("Cant insert urls into inline_table. " + str(e) + str(url_message))
                     pass
         except Exception as err:
-            self.logger.critical("Cant execute Show: " + str(e))
+            self.logger.critical("Cant execute Show: " + str(err))
         return
 
     def command_upgrade(self, message):
@@ -339,12 +357,12 @@ class SaleMonBot:
             self.logger.info("Receive Upgrade command from chat ID:" + str(message.chat.id))
             self.bot.send_message(self.ADMIN_ID, "Receive Upgrade command from chat ID: " + str(message.chat.id))
             self.bot.send_message(message.chat.id, "Plans:\n"
-                                                   "10 urls - $10 per month\n"
-                                                   "20 urls - $15 per month\n"
+                                                   "10 urls - $3 per month\n"
+                                                   "20 urls - $5 per month\n"
                                                    "dedicated instance (1-2 min delay) - ask @m_m_pa\n"
                                                    "custom - ask @m_m_pa\n"
                                                    "\n",
-                                  disable_web_page_preview=True)
+                                  disable_web_page_preview=True,reply_markup=self.markup_keyboard(self.markup_commands))
         except Exception as e:
             self.logger.critical("Cant execute Upgrade command. " + str(e))
         return
@@ -377,6 +395,9 @@ class SaleMonBot:
                     return
                 if message.text.startswith("/help"):
                     self.command_help(message)
+                    return
+                if message.text.startswith("/donate"):
+                    self.command_donate(message)
                     return
                 if message.text.startswith("/usage"):
                     self.command_usage(message)
@@ -435,13 +456,11 @@ class SaleMonBot:
 
                 # print(message)
 
-                commands = ["/help", "/show", "/add"]
-                self.bot.reply_to(message, text="Tap command", reply_markup=self.markup_keyboard(commands),
+                self.bot.reply_to(message, text="Tap command", reply_markup=self.markup_keyboard(self.markup_commands),
                                   parse_mode='Markdown')
             except Exception as e:
                 self.logger.warning("Cant process message:" + str(message) + str(e))
-                commands = ["/help", "/show", "/add"]
-                self.bot.reply_to(message, text="Unknown error. Tap command", reply_markup=self.markup_keyboard(commands),
+                self.bot.reply_to(message, text="Unknown error. Tap command", reply_markup=self.markup_keyboard(self.markup_commands),
                                   parse_mode='Markdown')
 
     def handle_callback_messages(self, callback_message):
@@ -527,6 +546,9 @@ class SaleMonBot:
             return False
 
     def add_url(self, user_id, url):
+        # убираем мобильную версию avito:
+        url = url.replace("m.avito","avito")
+
         # проверяем, что это корректный URL
         if not validators.url(url):
             return False
