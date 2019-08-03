@@ -51,8 +51,9 @@
 # fix broadcasts
 # version 1.54 2019-07-07
 # donate, refactor markup_commands, fix m.avito
-# version 1.55 2019-08-03
+# version 1.56 2019-08-03
 # add titles in /show
+# blocked flag
 
 import os
 import telebot
@@ -64,7 +65,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.55"
+VERSION = "1.56"
 
 
 class SaleMonBot:
@@ -228,6 +229,7 @@ class SaleMonBot:
         else:
             self.bot.send_message(message.chat.id, "Welcome back " + str(message.from_user.username) + ". Tap /help",
                                   reply_markup=self.markup_keyboard(self.markup_commands))
+            self.db_execute("update salemon_bot_users set blocked = '0', reason = '' where user_id = %s", (str(message.chat.id),), "Command Start() Clear flags")
 
     def command_help(self, message):
         try:
@@ -597,12 +599,13 @@ class SaleMonBot:
             return False
 
     def broadcast(self, message):
-        for item in self.db_query("select user_id from salemon_bot_users", (), "Get all Users"):
+        for item in self.db_query("select user_id from salemon_bot_users where blocked = '0'", (), "Get all Users"):
             try:
                 self.bot.send_message(item[0], message)
                 self.logger.info("Successfully sent broadcast for user:" + str(item[0]))
             except Exception as e:
                 self.logger.warning("Cant send broadcast message for user:" + str(item[0])+ "; " + str(e))
+                self.db_execute("update salemon_bot_users set blocked = '1', reason = %s where user_id = %s", (str(e)[0:299],item[0]),"Broadcast() Set user Blocked")
 
 
 if __name__ == '__main__':
