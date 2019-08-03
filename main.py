@@ -51,6 +51,8 @@
 # fix broadcasts
 # version 1.54 2019-07-07
 # donate, refactor markup_commands, fix m.avito
+# version 1.55 2019-08-03
+# add titles in /show
 
 import os
 import telebot
@@ -62,7 +64,7 @@ import validators
 from urllib.parse import urlparse
 import sys
 
-VERSION = "1.54"
+VERSION = "1.55"
 
 
 class SaleMonBot:
@@ -329,7 +331,7 @@ class SaleMonBot:
     def command_show(self, message):
         try:
             self.logger.info("Receive Show command from chat ID:" + str(message.chat.id))
-            urls = self.db_query("select url,subscription,url_id from salemon_engine_urls where user_id = %s",
+            urls = self.db_query("select url,subscription,url_id,title from salemon_engine_urls where user_id = %s",
                                  (message.chat.id,), "Get all urls")
             self.logger.debug("Urls: " + str(urls))
             if len(urls) < 1:
@@ -339,7 +341,7 @@ class SaleMonBot:
             self.bot.send_message(message.chat.id, "Your URLs and filters:")
             keys = ["modify", "delete"]
             for url in urls:
-                url_message = self.bot.send_message(message.chat.id, url[0] + "\n" + url[1].replace("|", "\n"),
+                url_message = self.bot.send_message(message.chat.id, url[3] + "\n" + url[0] + "\n" + url[1].replace("|", "\n"),
                                                     reply_markup=self.inline_keyboard(keys),
                                                     disable_web_page_preview=True)
                 try:
