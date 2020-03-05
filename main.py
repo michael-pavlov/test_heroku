@@ -431,6 +431,7 @@ class SaleMonBot:
                     self.logger.debug("double - trial ends for user: " + str(message.chat.id))
                     self.bot.send_message(message.chat.id, text="Пробный период истек, чтобы продолжить работу, оформите подписку через команду /upgrade\n\n"
                                           "Trial period is expired. To continue please get subscription via /upgrade")
+                    self.bot.send_message(self.ADMIN_ID, "Message after trial " + str(message.chat.id) + "\n" + message.text)
                 if message.reply_to_message is not None:
                     # TODO Process reply message
                     return
@@ -659,12 +660,11 @@ class SaleMonBot:
     def is_trial_expired(self, message):
         user_properties = self.db_query("select full_user,trial_expired_time from salemon_bot_users where user_id=%s", (message.chat.id,), "Get user properties")
         try:
-            full_user_flag = user_properties[0][0]
+            full_user_flag = int(user_properties[0][0])
             trial_expired_time = user_properties[0][1]
     
             if full_user_flag == 0:
                 if trial_expired_time < datetime.now():
-                    self.logger.debug("trial ends for user: " + str(message.chat.id))
                     return True
             return False
         except Exception as e:
