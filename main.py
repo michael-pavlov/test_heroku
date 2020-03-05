@@ -67,7 +67,7 @@ from urllib.parse import urlparse
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.57c"
+VERSION = "1.57d"
 
 
 class SaleMonBot:
@@ -428,6 +428,7 @@ class SaleMonBot:
                 self.bot.send_message(self.ADMIN_ID, "New message from " + str(message.chat.id) + "\n" + message.text)
                 # check trial
                 if self.is_trial_expired(message):
+                    self.logger.debug("double - trial ends for user: " + str(message.chat.id))
                     self.bot.send_message(message.chat.id, text="Пробный период истек, чтобы продолжить работу, оформите подписку через команду /upgrade\n\n"
                                           "Trial period is expired. To continue please get subscription via /upgrade")
                 if message.reply_to_message is not None:
@@ -663,6 +664,7 @@ class SaleMonBot:
     
             if full_user_flag == 0:
                 if trial_expired_time < datetime.now():
+                    self.logger.debug("trial ends for user: " + str(message.chat.id))
                     return True
             return False
         except Exception as e:
