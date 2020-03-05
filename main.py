@@ -54,6 +54,7 @@
 # version 1.56 2019-08-03
 # add titles in /show
 # blocked flag
+# version 1.57
 
 import os
 import telebot
@@ -64,13 +65,14 @@ import time
 import validators
 from urllib.parse import urlparse
 import sys
+from datetime import datetime, timedelta
 
-VERSION = "1.56"
+VERSION = "1.57b"
 
 
 class SaleMonBot:
 
-    def __init__(self):
+    def __init__(self, env = "heroku"):
 
         self.logger = logging.getLogger("SalemonBot")
         self.logger.setLevel(logging.DEBUG)
@@ -80,18 +82,46 @@ class SaleMonBot:
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-        self.TG_BOT_TOKEN = os.environ['TOKEN']
-        self.GLOBAL_RECONNECT_COUNT = int(os.environ['GLOBAL_RECONNECT_COUNT'])
+        if env == 'heroku':
+            self.TG_BOT_TOKEN = os.environ['TOKEN']
+            self.GLOBAL_RECONNECT_COUNT = int(os.environ['GLOBAL_RECONNECT_COUNT'])
+            # настройка БД
+            self.DB_DATABASE = "bots"
+            self.DB_USER = os.environ['DB_USER']
+            self.DB_PASSWORD = os.environ['DB_PASSWORD']
+            self.DB_HOST = os.environ['DB_HOST']
+            self.DB_PORT = os.environ['DB_PORT']
+        else:
+            self.TG_BOT_TOKEN = config.TG_BOT_TOKEN
+            self.GLOBAL_RECONNECT_COUNT = int(config.GLOBAL_RECONNECT_COUNT)
+            self.DB_DATABASE = "bots"
+            self.DB_USER = config.DB_USER
+            self.DB_PASSWORD = config.DB_PASSWORD
+            self.DB_HOST = config.DB_HOST
+            self.DB_PORT = config.DB_PORT
+
         self.reconnect_count = self.GLOBAL_RECONNECT_COUNT
         self.GLOBAL_RECONNECT_INTERVAL = 5
         self.RECONNECT_ERRORS = []
         self.ADMIN_ID = '211558'
         self.MAIN_HELP_LINK = "https://telegra.ph/usage-05-10"
+        self.TRIAL_DAYS = 3
+
+        self.new_user_welcome_message = "Привет. Я умею уведомлять тебя о новых объявлениях.\n" + \
+                                        "На выбранной площадке сформируй поисковый запрос. Обязательно поставь настройки отображения \"сначала новые\"\n" + \
+                                        "Потом в боте нажми /add и отправь содержимое адресной строки\n" + \
+                                        "\n" + \
+                                        "Вот тут подробнее и со скриншотами: " + self.MAIN_HELP_LINK + "\n\n" + \
+                                        "Мы регулярно отслеживаем изменения на площадках, чтобы успевать все парсить, поэтому бот не бесплатный\n" + \
+                                        "У тебя будет 3 дня и 3 ссылки для оценки работы бота, потом от 2$ в месяц\n" + \
+                                        "Если тебе нужно получать обновления быстро, то можно оформить выделенный сервис с задержкой в несколько минут\n\n" + \
+                                        "Подробнее про тарифы - /upgrade\n" + \
+                                        "По любым вопросам пиши @m_m_pa"
 
         self.bot = telebot.TeleBot(self.TG_BOT_TOKEN)
         # telebot.apihelper.proxy = config.PROXY
 
-        self.markup_commands = ["/show", "/add", "/help", "/donate"]
+        self.markup_commands = ["/show", "/add", "/help", "/upgrade"]
 
         # привязываем хенделер сообщений к боту:
         self.bot.set_update_listener(self.handle_messages)
@@ -107,13 +137,6 @@ class SaleMonBot:
         self.server.add_url_rule('/' + self.TELEBOT_URL + self.TG_BOT_TOKEN, view_func=self.process_updates,
                                  methods=['POST'])
         self.server.add_url_rule("/", view_func=self.webhook)
-
-        # настройа БД
-        self.DB_DATABASE = "bots"
-        self.DB_USER = os.environ['DB_USER']
-        self.DB_PASSWORD = os.environ['DB_PASSWORD']
-        self.DB_HOST = os.environ['DB_HOST']
-        self.DB_PORT = os.environ['DB_PORT']
 
         if not self.mysql_reconnect():
             self.logger.critical("no database connection. Exit.")
@@ -223,11 +246,13 @@ class SaleMonBot:
             user_name = message.from_user.first_name
 
         if self.new_user(message.chat.id, user_name):
-            self.bot.send_message(message.chat.id, "Your are in. tap /help",
+            self.bot.send_message(message.chat.id, self.new_user_welcome_message,
                                   reply_markup=self.markup_keyboard(self.markup_commands))
             self.bot.send_message(self.ADMIN_ID, "New user: " + str(user_name))
         else:
             self.bot.send_message(message.chat.id, "Welcome back " + str(message.from_user.username) + ". Tap /help",
+                                  reply_markup=self.markup_keyboard(self.markup_commands))
+            self.bot.send_message(message.chat.id, self.new_user_welcome_message,
                                   reply_markup=self.markup_keyboard(self.markup_commands))
             self.db_execute("update salemon_bot_users set blocked = '0', reason = '' where user_id = %s", (str(message.chat.id),), "Command Start() Clear flags")
 
@@ -279,7 +304,6 @@ class SaleMonBot:
                                                    "avito.ru\n"
                                                    "youla.ru \n"
                                                    "music.yandex.ru\n"
-                                                   "realty.yandex.ru (нестабильно)\n"
                                                    "sob.ru\n"
                                                    "kvartirant.ru\n"
                                                    "thelocals.ru\n"
@@ -360,9 +384,22 @@ class SaleMonBot:
         try:
             self.logger.info("Receive Upgrade command from chat ID:" + str(message.chat.id))
             self.bot.send_message(self.ADMIN_ID, "Receive Upgrade command from chat ID: " + str(message.chat.id))
-            self.bot.send_message(message.chat.id, "Plans:\n"
-                                                   "10 urls - $3 per month\n"
-                                                   "20 urls - $5 per month\n"
+            self.bot.send_message(message.chat.id, "Для покупки выберите и оплатите план на сервисе Patreon: https://www.patreon.com/pavlovsolutions\n"
+                                                   "После оплаты напишите в бота сообщение вида \"patreon member <>\", указав свой member name\n"
+                                                   "\n"
+                                                   "Варианты подписки:\n"
+                                                   "3 ссылки - 2$ в месяц\n"
+                                                   "10 ссылок - 5$ в месяц \n"
+                                                   "20 ссылок - 10$ в месяц\n"
+                                                   "Выделенный сервис (10 ссылок, задержка 1 мин.) - свяжитесь @m_m_pa\n"
+                                                   "Разработка под вас - свяжитесь @m_m_pa\n"
+                                                   "\n"
+                                                   "Select prefered plan and pay on Patreon: https://www.patreon.com/pavlovsolutions\n"
+                                                   "After payment notify us via message like \"patreon member <your member name>\"\n"
+                                                   "Plans:\n"
+                                                   "3 urls - $2 per month"
+                                                   "10 urls - $5 per month\n"
+                                                   "20 urls - $10 per month\n"
                                                    "dedicated instance (1-2 min delay) - ask @m_m_pa\n"
                                                    "custom - ask @m_m_pa\n"
                                                    "\n",
@@ -389,6 +426,10 @@ class SaleMonBot:
         for message in messages:
             try:
                 self.bot.send_message(self.ADMIN_ID, "New message from " + str(message.chat.id) + "\n" + message.text)
+                # check trial
+                if self.is_trial_expired(message):
+                    self.bot.send_message(message.chat.id, text="Пробный период истек, чтобы продолжить работу, оформите подписку через команду /upgrade\n\n"
+                                          "Trial period is expired. To continue please get subscription via /upgrade")
                 if message.reply_to_message is not None:
                     # TODO Process reply message
                     return
@@ -408,9 +449,6 @@ class SaleMonBot:
                     self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
                                     "Update State")
                     return
-                if message.text.startswith("/add"):
-                    self.command_add(message)
-                    return
                 if message.text.startswith("/show"):
                     self.command_show(message)
                     return
@@ -429,11 +467,18 @@ class SaleMonBot:
                 if message.text.startswith("/"):
                     self.bot.reply_to(message, "Unknown command. Tap /help")
                     return
+                if message.text.find("patreon") > -1:
+                    self.bot.reply_to(message, "Thank you")
+                    return
+                if message.text.startswith("/add"):
+                    self.command_add(message)
+                    return
 
                 # проверка на статусы:
                 state = \
                 self.db_query("select state from salemon_bot_users where user_id=%s", (message.chat.id,), "Get State")[0][0]
 
+                # + проверили на урл и если да - вставлять .or validators.url(message.text)
                 if state == "wait_url":
                     if self.add_url(message.chat.id, message.text):
                         self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),
@@ -456,8 +501,6 @@ class SaleMonBot:
                     return
 
                 # Если ничего не сработало
-                # TODO проверть на урл и если да - вставлять
-
                 # print(message)
 
                 self.bot.reply_to(message, text="Tap command", reply_markup=self.markup_keyboard(self.markup_commands),
@@ -539,11 +582,12 @@ class SaleMonBot:
         return
 
     def new_user(self, user_id, user_name):
+        trial_expired_time = str(datetime.now() + timedelta(days=self.TRIAL_DAYS))
         if len(self.db_query("select user_id from salemon_bot_users where user_id=%s", (user_id,),
                              "Check User exist")) > 0:
             return False
         # add user:
-        elif self.db_execute("insert into salemon_bot_users (name,user_id) values (%s,%s)", (user_name, user_id),
+        elif self.db_execute("insert into salemon_bot_users (name,user_id,trial_expired_time) values (%s,%s,%s)", (user_name, user_id, trial_expired_time),
                              "Add new User"):
             return True
         else:
@@ -569,6 +613,10 @@ class SaleMonBot:
 
         if len(url) > 1000:
             return False
+
+        # проверка на длину урла для avito
+        #
+        #
 
         # определяем флаг tor
         if url.find("ebay.com") > 0:
@@ -607,6 +655,14 @@ class SaleMonBot:
                 self.logger.warning("Cant send broadcast message for user:" + str(item[0])+ "; " + str(e))
                 self.db_execute("update salemon_bot_users set blocked = '1', reason = %s where user_id = %s", (str(e)[0:299],item[0]),"Broadcast() Set user Blocked")
 
+    def is_trial_expired(self, message):
+        user_properties = self.db_query("select full_user,trial_expired_time from salemon_bot_users where user_id=%s", (message.chat.id,), "Get user properties")
+        full_user_flag = user_properties[0][0]
+        trial_expired_time = user_properties[0][1]
+
+        if trial_expired_time < datetime.now() and full_user_flag == 0:
+            return True
+        return False
 
 if __name__ == '__main__':
     dBot = SaleMonBot()
