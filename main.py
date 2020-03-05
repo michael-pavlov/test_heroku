@@ -664,7 +664,7 @@ class SaleMonBot:
             trial_expired_time = user_properties[0][1]
     
             if full_user_flag == 0:
-                self.logger.debug(str(trial_expired_time) + "-" + str(datetime.now())
+                self.logger.debug(str(trial_expired_time) + "-" + str(datetime.now()))
                 if trial_expired_time < datetime.now():
                     self.logger.debug("trial ends for user: " + str(message.chat.id))
                     return True
