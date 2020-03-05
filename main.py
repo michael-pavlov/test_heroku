@@ -67,12 +67,12 @@ from urllib.parse import urlparse
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.57d"
+VERSION = "1.57f"
 
 
 class SaleMonBot:
 
-    def __init__(self, env = "heroku"):
+    def __init__(self, env = 'heroku'):
 
         self.logger = logging.getLogger("SalemonBot")
         self.logger.setLevel(logging.DEBUG)
@@ -81,6 +81,7 @@ class SaleMonBot:
         formatter = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
+        self.env = env
 
         if env == 'heroku':
             self.TG_BOT_TOKEN = os.environ['TOKEN']
@@ -229,14 +230,25 @@ class SaleMonBot:
                 time.sleep(2)
 
     def run(self):
-        while True:
-            try:
-                self.logger.info("Server run. Version: " + VERSION)
-                self.webhook()
-                self.server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
-            except Exception as e:
-                self.logger.critical("Cant start Bot. RECONNECT" + str(e))
-                time.sleep(2)
+        if self.env == 'heroku':
+            while True:
+                try:
+                    self.logger.info("Server run. Version: " + VERSION)
+                    self.webhook()
+                    self.server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+                except Exception as e:
+                    self.logger.critical("Cant start Bot. RECONNECT" + str(e))
+                    time.sleep(2)
+        if self.env == 'local':
+            while True:
+                try:
+                    self.bot.remove_webhook()
+                    self.logger.info("Server run. Version: " + VERSION)
+                    print("Server run. Version: " + VERSION)
+                    self.bot.polling()
+                except Exception as e:
+                    self.logger.critical("Cant start SaleMonBot. RECONNECT " + str(e))
+                    time.sleep(2)
 
     def command_start(self, message):
         self.logger.info("Receive Start command from chat ID:" + str(message.chat.id))
@@ -426,6 +438,10 @@ class SaleMonBot:
         for message in messages:
             try:
                 self.bot.send_message(self.ADMIN_ID, "New message from " + str(message.chat.id) + "\n" + message.text)
+                # check trial
+                if self.is_trial_expired(message):
+                    self.bot.send_message(message.chat.id, text="Пробный период истек, чтобы продолжить работу, оформите подписку через команду /upgrade\n\n"
+                                          "Trial period is expired. To continue please get subscription via /upgrade")
                 if message.reply_to_message is not None:
                     # TODO Process reply message
                     return
@@ -656,11 +672,9 @@ class SaleMonBot:
         try:
             full_user_flag = int(user_properties[0][0])
             trial_expired_time = user_properties[0][1]
-    
+
             if full_user_flag == 0:
-                self.logger.debug(str(trial_expired_time) + "-" + str(datetime.now()))
                 if trial_expired_time < datetime.now():
-                    self.logger.debug("trial ends for user: " + str(message.chat.id))
                     return True
             return False
         except Exception as e:
