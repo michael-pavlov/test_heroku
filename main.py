@@ -67,7 +67,7 @@ from urllib.parse import urlparse
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.57b"
+VERSION = "1.57c"
 
 
 class SaleMonBot:
@@ -657,12 +657,17 @@ class SaleMonBot:
 
     def is_trial_expired(self, message):
         user_properties = self.db_query("select full_user,trial_expired_time from salemon_bot_users where user_id=%s", (message.chat.id,), "Get user properties")
-        full_user_flag = user_properties[0][0]
-        trial_expired_time = user_properties[0][1]
-
-        if trial_expired_time < datetime.now() and full_user_flag == 0:
-            return True
-        return False
+        try:
+            full_user_flag = user_properties[0][0]
+            trial_expired_time = user_properties[0][1]
+    
+            if full_user_flag == 0:
+                if trial_expired_time < datetime.now():
+                    return True
+            return False
+        except Exception as e:
+            self.bot.send_message(self.ADMIN_ID, "Cant check trial for user: " + str(message.chat.id))
+            return False
 
 if __name__ == '__main__':
     dBot = SaleMonBot()
