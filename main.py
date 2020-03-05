@@ -4,10 +4,6 @@
 # version 1.00 2019-04-05
 # первая версия
 
-# version 1.10 2019-04-08
-# + бродкаст сообщения
-# + генерация служебной записки
-
 # version 1.20 2019-04-08
 # убрана логика выборочного реконнекта - что-то глючит, наблюдаем
 
@@ -67,12 +63,12 @@ from urllib.parse import urlparse
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.57f"
+VERSION = "1.57"
 
 
 class SaleMonBot:
 
-    def __init__(self, env = 'heroku'):
+    def __init__(self, env = "heroku"):
 
         self.logger = logging.getLogger("SalemonBot")
         self.logger.setLevel(logging.DEBUG)
@@ -479,7 +475,7 @@ class SaleMonBot:
                 if message.text.startswith("/"):
                     self.bot.reply_to(message, "Unknown command. Tap /help")
                     return
-                if message.text.find("patreon") > -1:
+                if message.text.lower().find("patreon") > -1:
                     self.bot.reply_to(message, "Thank you")
                     return
                 if message.text.startswith("/add"):
