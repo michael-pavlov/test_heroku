@@ -426,12 +426,6 @@ class SaleMonBot:
         for message in messages:
             try:
                 self.bot.send_message(self.ADMIN_ID, "New message from " + str(message.chat.id) + "\n" + message.text)
-                # check trial
-                if self.is_trial_expired(message):
-                    self.logger.debug("double - trial ends for user: " + str(message.chat.id))
-                    self.bot.send_message(message.chat.id, text="Пробный период истек, чтобы продолжить работу, оформите подписку через команду /upgrade\n\n"
-                                          "Trial period is expired. To continue please get subscription via /upgrade")
-                    self.bot.send_message(self.ADMIN_ID, "Message after trial " + str(message.chat.id) + "\n" + message.text)
                 if message.reply_to_message is not None:
                     # TODO Process reply message
                     return
