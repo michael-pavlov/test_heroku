@@ -63,7 +63,7 @@ from urllib.parse import urlparse
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.57"
+VERSION = "1.58"
 
 
 class SaleMonBot:
@@ -472,15 +472,16 @@ class SaleMonBot:
                     else:
                         self.bot.reply_to(message, "You are not admin")
                     return
+                if message.text.startswith("/add"):
+                    self.command_add(message)
+                    return
                 if message.text.startswith("/"):
                     self.bot.reply_to(message, "Unknown command. Tap /help")
                     return
                 if message.text.lower().find("patreon") > -1:
                     self.bot.reply_to(message, "Thank you")
                     return
-                if message.text.startswith("/add"):
-                    self.command_add(message)
-                    return
+                
 
                 # проверка на статусы:
                 state = \
