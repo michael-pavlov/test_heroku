@@ -62,13 +62,14 @@ import validators
 from urllib.parse import urlparse
 import sys
 from datetime import datetime, timedelta
+import config
 
-VERSION = "1.59"
+VERSION = "1.60"
 
 
 class SaleMonBot:
 
-    def __init__(self, env="heroku"):
+    def __init__(self, env = "heroku"):
 
         self.logger = logging.getLogger("SalemonBot")
         self.logger.setLevel(logging.DEBUG)
@@ -101,7 +102,7 @@ class SaleMonBot:
         self.GLOBAL_RECONNECT_INTERVAL = 5
         self.RECONNECT_ERRORS = []
         self.ADMIN_ID = '211558'
-        self.MAIN_HELP_LINK = "https://tgraph.io/usage-05-10"
+        self.MAIN_HELP_LINK = "https://telegra.ph/usage-05-10"
         self.TRIAL_DAYS = 3
 
         self.new_user_welcome_message = "Привет. Я умею уведомлять тебя о новых объявлениях.\n" + \
@@ -113,8 +114,8 @@ class SaleMonBot:
                                         "Мы регулярно отслеживаем изменения на площадках, чтобы успевать все парсить, поэтому бот не бесплатный\n" + \
                                         "У тебя будет 3 дня и 3 ссылки для оценки работы бота, потом от 2$ в месяц\n" + \
                                         "Если тебе нужно получать обновления быстро, то можно оформить выделенный сервис с задержкой в несколько минут\n\n" + \
-                                        "Подробнее про тарифы - /upgrade\n" + \
                                         "Если тебе нужен свой бот, парсер сайта или другая автоматизация, пиши - поможем\n" + \
+                                        "Подробнее про тарифы - /upgrade\n" + \
                                         "По любым вопросам пиши @m_m_pa"
 
         self.bot = telebot.TeleBot(self.TG_BOT_TOKEN)
@@ -141,30 +142,27 @@ class SaleMonBot:
             self.logger.critical("no database connection. Exit.")
             quit()
 
-
     def process_updates(self):
         self.bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
         return "!", 200
-    
-    
+
     def webhook(self):
         self.bot.remove_webhook()
         self.bot.set_webhook(url=self.BASE_URL + self.TELEBOT_URL + self.TG_BOT_TOKEN)
         return "!", 200
-    
-    
+
     def mysql_reconnect(self):
         while self.reconnect_count > 0:
             try:
                 self.logger.info("Try reconnect...")
                 self.reconnect_count = self.reconnect_count - 1
-    
+
                 self.connection_main = mysql.connector.connect(user=self.DB_USER, password=self.DB_PASSWORD,
                                                                host=self.DB_HOST, port=self.DB_PORT,
                                                                database=self.DB_DATABASE)
                 self.connection_main.autocommit = True
-                self.connection_main.reconnect(attempts=3, delay=2)
-    
+                self.connection_main.reconnect(attempts=3,delay=2)
+
                 self.cursor_m = self.connection_main.cursor(buffered=True)
                 self.logger.info("Reconnect successful " + str(self.connection_main.is_connected()))
                 self.reconnect_count = self.GLOBAL_RECONNECT_COUNT
@@ -174,8 +172,7 @@ class SaleMonBot:
                 time.sleep(self.GLOBAL_RECONNECT_INTERVAL)
         self.logger.critical("no database connection. Exit.")
         return False
-    
-    
+
     # method for inserts|updates|deletes
     def db_execute(self, query, params, comment=""):
         try:
@@ -195,8 +192,7 @@ class SaleMonBot:
             except Exception as e:
                 self.logger.critical("Cant commit transaction " + comment + ". " + str(e))
         return False
-    
-    
+
     # method for selects
     def db_query(self, query, params, comment=""):
         try:
@@ -222,8 +218,7 @@ class SaleMonBot:
         # except Exception as e:
         #    self.logger.critical("Cant "  + comment + ". " + str(e))
         return []
-    
-    
+
     def start_polling(self):
         while True:
             try:
@@ -232,8 +227,7 @@ class SaleMonBot:
             except Exception as e:
                 self.logger.critical("Cant start Bot polling. " + str(e))
                 time.sleep(2)
-    
-    
+
     def run(self):
         if self.env == 'heroku':
             while True:
@@ -254,15 +248,14 @@ class SaleMonBot:
                 except Exception as e:
                     self.logger.critical("Cant start SaleMonBot. RECONNECT " + str(e))
                     time.sleep(2)
-    
-    
+
     def command_start(self, message):
         self.logger.info("Receive Start command from chat ID:" + str(message.chat.id))
         if message.from_user.username is not None:
             user_name = message.from_user.username
         else:
             user_name = message.from_user.first_name
-    
+
         if self.new_user(message.chat.id, user_name):
             self.bot.send_message(message.chat.id, self.new_user_welcome_message,
                                   reply_markup=self.markup_keyboard(self.markup_commands))
@@ -273,8 +266,7 @@ class SaleMonBot:
             self.bot.send_message(message.chat.id, self.new_user_welcome_message,
                                   reply_markup=self.markup_keyboard(self.markup_commands))
             self.db_execute("update salemon_bot_users set blocked = '0', reason = '' where user_id = %s", (str(message.chat.id),), "Command Start() Clear flags")
-    
-    
+
     def command_help(self, message):
         try:
             self.logger.info("Receive Help command from chat ID:" + str(message.chat.id))
@@ -283,18 +275,17 @@ class SaleMonBot:
                                                    "/add - add url\n"
                                                    "/show - show urls\n"
                                                    "readme(ru) - " + self.MAIN_HELP_LINK + "\n"
-                                                                                           "support - @m_m_pa\n\n"
-                                                                                           "version - " + VERSION + "\n"
-                                                                                                                    "\n",
+                                                   "support - @m_m_pa\n\n"
+                                                   "version - " + VERSION + "\n"
+                                                   "\n",
                                   disable_web_page_preview=True, reply_markup=self.markup_keyboard(self.markup_commands))
         except Exception as e:
             self.logger.critical("Cant execute Help command. " + str(e))
         return
-    
-    
+
     def command_donate(self, message):
         try:
-            self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id), "Update State")
+            self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("", message.chat.id),"Update State")
             self.logger.info("Receive Donate command from chat ID:" + str(message.chat.id))
             self.bot.send_message(message.chat.id, "*Donate project*:\n"
                                                    "PayPal: https://paypal.me/mrmichaelpavlov\n"
@@ -303,12 +294,11 @@ class SaleMonBot:
                                                    "ETH: 0x6dD6E739891D15A3dcEFF9587dECC780a3809246\n"
                                                    "BTC: 1FzUWXtViv1MtvyrgcPGSmwnusHAaUXxLM\n"
                                                    "\n",
-                                  disable_web_page_preview=True, parse_mode='Markdown', reply_markup=self.markup_keyboard(self.markup_commands))
+                                  disable_web_page_preview=True, parse_mode='Markdown',reply_markup=self.markup_keyboard(self.markup_commands))
         except Exception as e:
             self.logger.critical("Cant execute Donate command. " + str(e))
         return
-    
-    
+
     def command_usage(self, message):
         try:
             self.logger.info("Receive Usage command from chat ID:" + str(message.chat.id))
@@ -337,8 +327,7 @@ class SaleMonBot:
         except Exception as e:
             self.logger.critical("Cant execute Usage command. " + str(e))
         return
-    
-    
+
     def command_stop(self, message):
         try:
             self.logger.info("Receive Stop command from chat ID:" + str(message.chat.id))
@@ -346,23 +335,22 @@ class SaleMonBot:
         except Exception as e:
             self.logger.critical("Cant execute Stop command. " + str(e))
         return
-    
-    
+
     def command_add(self, message):
         self.logger.info("Receive Add command from chat ID:" + str(message.chat.id))
-    
+
         try:
             # проверяем доступное количество URL
             urls_count = \
-                self.db_query("select count(*) from salemon_engine_urls where user_id = %s", (message.chat.id,), "Count urls")[
-                    0][0]
+            self.db_query("select count(*) from salemon_engine_urls where user_id = %s", (message.chat.id,), "Count urls")[
+                0][0]
             max_urls_for_user = \
-                self.db_query("select max_urls from salemon_bot_users where user_id = %s", (message.chat.id,),
-                              "Get User Max Urls")[0][0]
+            self.db_query("select max_urls from salemon_bot_users where user_id = %s", (message.chat.id,),
+                          "Get User Max Urls")[0][0]
             if urls_count >= max_urls_for_user:
                 self.bot.send_message(message.chat.id, "Url limit exceeded.\nDelete other URLs or /upgrade account")
                 return
-    
+
             # если есть еще место - добавляем
             if self.db_execute("update salemon_bot_users set state = %s where user_id = %s", ("wait_url", message.chat.id),
                                "Update State"):
@@ -376,8 +364,7 @@ class SaleMonBot:
             except:
                 pass
         return
-    
-    
+
     def command_show(self, message):
         try:
             self.logger.info("Receive Show command from chat ID:" + str(message.chat.id))
@@ -385,9 +372,9 @@ class SaleMonBot:
                                  (message.chat.id,), "Get all urls")
             self.logger.debug("Urls: " + str(urls))
             if len(urls) < 1:
-                self.bot.send_message(message.chat.id, "No URLs yet.\nTap /add to add URL", reply_markup=self.markup_keyboard(self.markup_commands))
+                self.bot.send_message(message.chat.id, "No URLs yet.\nTap /add to add URL",reply_markup=self.markup_keyboard(self.markup_commands))
                 return
-    
+
             self.bot.send_message(message.chat.id, "Your URLs and filters:")
             keys = ["modify", "delete"]
             for url in urls:
@@ -403,8 +390,7 @@ class SaleMonBot:
         except Exception as err:
             self.logger.critical("Cant execute Show: " + str(err))
         return
-    
-    
+
     def command_upgrade(self, message):
         try:
             self.logger.info("Receive Upgrade command from chat ID:" + str(message.chat.id))
@@ -428,28 +414,25 @@ class SaleMonBot:
                                                    "dedicated instance (1-2 min delay) - ask @m_m_pa\n"
                                                    "custom - ask @m_m_pa\n"
                                                    "\n",
-                                  disable_web_page_preview=True, reply_markup=self.markup_keyboard(self.markup_commands))
+                                  disable_web_page_preview=True,reply_markup=self.markup_keyboard(self.markup_commands))
         except Exception as e:
             self.logger.critical("Cant execute Upgrade command. " + str(e))
         return
-    
-    
+
     def markup_keyboard(self, list):
         markupkeyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=7)
         markupkeyboard.add(*[telebot.types.KeyboardButton(name) for name in list])
-    
+
         # remove keyboard
         # markup = telebot.types.ReplyKeyboardRemove(selective=False)
         # self.bot.send_message(message.chat.id, "",reply_markup=markup)
         return markupkeyboard
-    
-    
+
     def inline_keyboard(self, list):
         inlinekeyboard = telebot.types.InlineKeyboardMarkup(row_width=7)
         inlinekeyboard.add(*[telebot.types.InlineKeyboardButton(text=name, callback_data=name) for name in list])
         return inlinekeyboard
-    
-    
+
     def handle_messages(self, messages):
         for message in messages:
             try:
@@ -457,7 +440,7 @@ class SaleMonBot:
                 # check trial
                 if self.is_trial_expired(message):
                     self.bot.send_message(message.chat.id, text="Пробный период истек, чтобы продолжить работу, оформите подписку через команду /upgrade\n\n"
-                                                                "Trial period is expired. To continue please get subscription via /upgrade")
+                                          "Trial period is expired. To continue please get subscription via /upgrade")
                 if message.reply_to_message is not None:
                     # TODO Process reply message
                     return
@@ -501,11 +484,12 @@ class SaleMonBot:
                 if message.text.lower().find("patreon") > -1:
                     self.bot.reply_to(message, "Thank you")
                     return
-    
+
+
                 # проверка на статусы:
                 state = \
-                    self.db_query("select state from salemon_bot_users where user_id=%s", (message.chat.id,), "Get State")[0][0]
-    
+                self.db_query("select state from salemon_bot_users where user_id=%s", (message.chat.id,), "Get State")[0][0]
+
                 # + проверили на урл и если да - вставлять .or validators.url(message.text)
                 if state == "wait_url":
                     if self.add_url(message.chat.id, message.text):
@@ -517,7 +501,7 @@ class SaleMonBot:
                         self.bot.reply_to(message,
                                           "Not a valid url or unsupported site\nExample: http://www.domain.com/search?q=test")
                     return
-    
+
                 if state.startswith("wait_subs_for_urlid"):
                     url_id = state[state.find(":") + 1:]
                     if self.set_subscription(url_id, message.text):
@@ -527,22 +511,21 @@ class SaleMonBot:
                     else:
                         self.bot.reply_to(message, "Not a valid format for this Domain\nHelp: " + self.MAIN_HELP_LINK)
                     return
-    
+
                 # Если ничего не сработало
                 # print(message)
-    
+
                 self.bot.reply_to(message, text="Tap command", reply_markup=self.markup_keyboard(self.markup_commands),
                                   parse_mode='Markdown')
             except Exception as e:
                 self.logger.warning("Cant process message:" + str(message) + str(e))
                 self.bot.reply_to(message, text="Unknown error. Tap command", reply_markup=self.markup_keyboard(self.markup_commands),
                                   parse_mode='Markdown')
-    
-    
+
     def handle_callback_messages(self, callback_message):
         # обязательный ответ в API
         self.bot.answer_callback_query(callback_message.id)
-    
+
         # Разбор команд
         # команда удаления URL
         if callback_message.data == "delete":
@@ -567,12 +550,12 @@ class SaleMonBot:
             else:
                 self.logger.error("Cant delete URL:" + str(callback_message.chat.id))
                 return
-    
+
         # Команда показа списка URLs
         if callback_message.data.startswith("/show"):
             self.command_show(callback_message.message)
             return
-    
+
         # Команда изменения правил b/w листов
         if callback_message.data == "modify":
             # достаем url_id:
@@ -604,13 +587,12 @@ class SaleMonBot:
                                     "Update State")
                     self.bot.send_message(callback_message.message.chat.id, "Please provide new filter list..")
             return
-    
+
         # subscription = self.db_query("select subscription from salemon_engine_urls where url_id = %s",(url_id[0][0]),"Get Subscription")
         # print(callback_message.data)
-    
+
         return
-    
-    
+
     def new_user(self, user_id, user_name):
         trial_expired_time = str(datetime.now() + timedelta(days=self.TRIAL_DAYS))
         if len(self.db_query("select user_id from salemon_bot_users where user_id=%s", (user_id,),
@@ -622,53 +604,51 @@ class SaleMonBot:
             return True
         else:
             return False
-    
-    
+
     def add_url(self, user_id, url):
         # убираем мобильную версию avito:
-        url = url.replace("m.avito", "avito")
-    
+        url = url.replace("m.avito","avito")
+
         # проверяем, что это корректный URL
         if not validators.url(url):
             return False
-    
+
         priority = 0
-    
+
         # проверяем, есть ли  нас парсер для нее
         parsed_uri = urlparse(url)
         domain = '{uri.netloc}'.format(uri=parsed_uri)
-        domain = domain.replace("www.", "")
+        domain = domain.replace("www.","")
         if len(self.db_query("select parser_name from salemon_engine_parsers where domain = %s", (domain,),
                              "Check Domain")) < 1:
             return False
-    
+
         if len(url) > 1000:
             return False
-    
+
         # проверка на длину урла для avito
         #
         #
-    
+
         # определяем флаг tor
         if url.find("ebay.com") > 0:
             tor_requirement = 1
         else:
             tor_requirement = 0
-    
+
         # дополнительная валидация ya music
         if url.find("music.yandex.ru") > 0:
             priority = 1
             if not url.endswith("albums/new"):
                 return False
-    
+
         if self.db_execute(
                 "insert into salemon_engine_urls (url,user_id,tor_requirement,priority) values (%s,%s,%s,%s)",
                 (url, user_id, tor_requirement, priority), "Add url"):
             return True
         else:
             return False
-    
-    
+
     def set_subscription(self, url_id, subscription):
         if subscription.find("|") >= 0:
             return False
@@ -677,24 +657,22 @@ class SaleMonBot:
             return True
         else:
             return False
-    
-    
+
     def broadcast(self, message):
         for item in self.db_query("select user_id from salemon_bot_users where blocked = '0'", (), "Get all Users"):
             try:
                 self.bot.send_message(item[0], message)
                 self.logger.info("Successfully sent broadcast for user:" + str(item[0]))
             except Exception as e:
-                self.logger.warning("Cant send broadcast message for user:" + str(item[0]) + "; " + str(e))
-                self.db_execute("update salemon_bot_users set blocked = '1', reason = %s where user_id = %s", (str(e)[0:299], item[0]), "Broadcast() Set user Blocked")
-    
-    
+                self.logger.warning("Cant send broadcast message for user:" + str(item[0])+ "; " + str(e))
+                self.db_execute("update salemon_bot_users set blocked = '1', reason = %s where user_id = %s", (str(e)[0:299],item[0]),"Broadcast() Set user Blocked")
+
     def is_trial_expired(self, message):
         user_properties = self.db_query("select full_user,trial_expired_time from salemon_bot_users where user_id=%s", (message.chat.id,), "Get user properties")
         try:
             full_user_flag = int(user_properties[0][0])
             trial_expired_time = user_properties[0][1]
-    
+
             if full_user_flag == 0:
                 if trial_expired_time < datetime.now():
                     return True
@@ -702,8 +680,19 @@ class SaleMonBot:
         except Exception as e:
             self.bot.send_message(self.ADMIN_ID, "Cant check trial for user: " + str(message.chat.id))
             return False
-    
 
 if __name__ == '__main__':
     dBot = SaleMonBot()
     dBot.run()
+
+    #
+    # list = [('335809170',), ('339465467',), ('34185809',), ('342258749',), ('347910148',), ('348743947',), ('349336758',), ('352139031',), ('355092394',), ('357357023',), ('361212572',), ('365880816',), ('367267618',), ('367622542',), ('368911325',), ('369448325',), ('369494385',), ('371091233',), ('371428220',), ('372346705',), ('374916489',), ('381226464',), ('381363633',), ('381480020',), ('383367511',), ('387684654',), ('392171556',), ('393562846',), ('394056278',), ('395362073',), ('399577449',), ('399824170',), ('399950118',), ('400997149',), ('40138454',), ('402042659',), ('403167046',), ('403172030',), ('40505028',), ('408013293',), ('408189526',), ('408533330',), ('409115095',), ('410030525',), ('413839973',), ('414218512',), ('417190355',), ('417305644',), ('419068089',), ('419443349',), ('421911251',), ('422057565',), ('426569306',), ('428922978',), ('429015437',), ('431046227',), ('431648463',), ('433405745',), ('435075398',), ('435455834',), ('437331264',), ('439432331',), ('440046277',), ('441955531',), ('442091185',), ('444357421',), ('448231327',), ('44890279',), ('450244969',), ('450254487',), ('451960843',), ('458092662',), ('460490023',), ('461856908',), ('462182604',), ('463639359',), ('465285868',), ('468436862',), ('471845762',), ('475261248',), ('475346360',), ('477903416',), ('481387207',), ('482814307',), ('48531466',), ('486645222',), ('488905640',), ('491118689',), ('492322888',), ('493095601',), ('493717235',), ('497303327',), ('498129507',), ('498657191',), ('500233971',), ('502733247',), ('503920411',), ('504120285',), ('504541460',), ('512072410',), ('51241615',), ('515787520',), ('517384388',), ('51879840',), ('522509586',), ('523853674',), ('528016651',), ('529374615',), ('529433414',), ('530982645',), ('532721026',), ('540932534',), ('543338383',), ('545525554',), ('546665027',), ('56181658',), ('569218358',), ('570710345',), ('57298445',), ('57730459',), ('580671559',), ('584432944',), ('586670164',), ('589831233',), ('591912716',), ('595433659',), ('597219204',), ('599176955',), ('599314317',), ('60007741',), ('601537371',), ('607285949',), ('608824295',), ('612325495',), ('613554174',), ('61427016',), ('615242564',), ('621566172',), ('626255196',), ('627803345',), ('63716636',), ('637244525',), ('638874022',), ('639622030',), ('640834872',), ('641348909',), ('649305133',), ('657465541',), ('662107166',), ('66612717',), ('668438354',), ('668551882',), ('67167346',), ('672758064',), ('68439216',), ('684871954',), ('684923778',), ('689155419',), ('693443547',), ('694146045',), ('697049258',), ('699068229',), ('699610419',), ('704775479',), ('713465850',), ('718618158',), ('72004042',), ('725868692',), ('728375357',), ('740801630',), ('744202862',), ('748400686',), ('749805036',), ('750353578',), ('752501332',), ('757696382',), ('758164213',), ('759873418',), ('761321599',), ('765451330',), ('773760500',), ('781261659',), ('784380900',), ('78476777',), ('793732706',), ('796692536',), ('799166524',), ('802890932',), ('804305941',), ('804797490',), ('807252733',), ('818600356',), ('820818928',), ('821987362',), ('828228778',), ('82827414',), ('837570739',), ('842640548',), ('84350574',), ('847550197',), ('849615399',), ('851016781',), ('855097609',), ('856549919',), ('85727235',), ('857785225',), ('861099337',), ('865904738',), ('866490245',), ('873631510',), ('874520',), ('876470700',), ('882511690',), ('88265192',), ('885650103',), ('886325638',), ('892603321',), ('895116429',), ('899971835',), ('90901168',), ('92208300',), ('936324752',), ('960200882',), ('96164845',), ('968412320',), ('97044673',), ('981273649',), ('981891791',), ('9834636',), ('986908969',)]
+    # # list = [('211558',)]
+    # message = "Всем привет. Поправил ошибку при добавлении урла через команду /add\nПодписки и trial-периоды продлены."
+    # for item in list:
+    #     try:
+    #         dBot.bot.send_message(item[0], message)
+    #         dBot.logger.info("Successfully sent broadcast for user:" + str(item[0]))
+    #     except Exception as e:
+    #         dBot.logger.warning("Cant send broadcast message for user:" + str(item[0]) + "; " + str(e))
+    #         dBot.db_execute("update salemon_bot_users set blocked = '1', reason = %s where user_id = %s", (str(e)[0:299], item[0]), "Broadcast() Set user Blocked")
