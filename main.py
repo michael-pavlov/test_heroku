@@ -63,7 +63,7 @@ from urllib.parse import urlparse
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.58"
+VERSION = "1.59"
 
 
 class SaleMonBot:
@@ -101,10 +101,11 @@ class SaleMonBot:
         self.GLOBAL_RECONNECT_INTERVAL = 5
         self.RECONNECT_ERRORS = []
         self.ADMIN_ID = '211558'
-        self.MAIN_HELP_LINK = "https://telegra.ph/usage-05-10"
+        self.MAIN_HELP_LINK = "https://tgraph.io/usage-05-10"
         self.TRIAL_DAYS = 3
 
         self.new_user_welcome_message = "Привет. Я умею уведомлять тебя о новых объявлениях.\n" + \
+                                        "Больше не нужно постоянно сидеть на сайтах, я сделаю это сам\n"
                                         "На выбранной площадке сформируй поисковый запрос. Обязательно поставь настройки отображения \"сначала новые\"\n" + \
                                         "Потом в боте нажми /add и отправь содержимое адресной строки\n" + \
                                         "\n" + \
@@ -113,6 +114,7 @@ class SaleMonBot:
                                         "У тебя будет 3 дня и 3 ссылки для оценки работы бота, потом от 2$ в месяц\n" + \
                                         "Если тебе нужно получать обновления быстро, то можно оформить выделенный сервис с задержкой в несколько минут\n\n" + \
                                         "Подробнее про тарифы - /upgrade\n" + \
+                                        "Если тебе нужен свой бот, парсер сайта или другая автоматизация, пиши - поможем\n"
                                         "По любым вопросам пиши @m_m_pa"
 
         self.bot = telebot.TeleBot(self.TG_BOT_TOKEN)
