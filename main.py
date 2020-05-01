@@ -116,30 +116,30 @@ class SaleMonBot:
                                         "Подробнее про тарифы - /upgrade\n" + \
                                         "Если тебе нужен свой бот, парсер сайта или другая автоматизация, пиши - поможем\n" + \
                                         "По любым вопросам пиши @m_m_pa"
-        
-    self.bot = telebot.TeleBot(self.TG_BOT_TOKEN)
-    # telebot.apihelper.proxy = config.PROXY
 
-    self.markup_commands = ["/show", "/add", "/help", "/upgrade"]
-
-    # привязываем хенделер сообщений к боту:
-    self.bot.set_update_listener(self.handle_messages)
-    handler_dic = self.bot._build_handler_dict(self.handle_callback_messages)
-    # привязываем хенделр колбеков inline-клавиатуры к боту:
-    self.bot.add_callback_query_handler(handler_dic)
-
-    # Настройка Flask
-    self.server = Flask(__name__)
-    self.TELEBOT_URL = 'telebot_webhook/'
-    self.BASE_URL = 'https://test-hw-bot.herokuapp.com/'
-
-    self.server.add_url_rule('/' + self.TELEBOT_URL + self.TG_BOT_TOKEN, view_func=self.process_updates,
-                             methods=['POST'])
-    self.server.add_url_rule("/", view_func=self.webhook)
-
-    if not self.mysql_reconnect():
-        self.logger.critical("no database connection. Exit.")
-        quit()
+        self.bot = telebot.TeleBot(self.TG_BOT_TOKEN)
+        # telebot.apihelper.proxy = config.PROXY
+    
+        self.markup_commands = ["/show", "/add", "/help", "/upgrade"]
+    
+        # привязываем хенделер сообщений к боту:
+        self.bot.set_update_listener(self.handle_messages)
+        handler_dic = self.bot._build_handler_dict(self.handle_callback_messages)
+        # привязываем хенделр колбеков inline-клавиатуры к боту:
+        self.bot.add_callback_query_handler(handler_dic)
+    
+        # Настройка Flask
+        self.server = Flask(__name__)
+        self.TELEBOT_URL = 'telebot_webhook/'
+        self.BASE_URL = 'https://test-hw-bot.herokuapp.com/'
+    
+        self.server.add_url_rule('/' + self.TELEBOT_URL + self.TG_BOT_TOKEN, view_func=self.process_updates,
+                                 methods=['POST'])
+        self.server.add_url_rule("/", view_func=self.webhook)
+    
+        if not self.mysql_reconnect():
+            self.logger.critical("no database connection. Exit.")
+            quit()
 
 
 def process_updates(self):
